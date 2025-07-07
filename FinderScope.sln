@@ -1,0 +1,33 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinderScope.Core", "src\FinderScope.Core\FinderScope.Core.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinderScope.WPF", "src\FinderScope.WPF\FinderScope.WPF.csproj", "{EFB9DEBE-16B2-43D8-AA4B-0FE97C7DBAA1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinderScope.Tests", "tests\FinderScope.Tests\FinderScope.Tests.csproj", "{1BF8CC87-5062-4CB0-AAC7-6330F0F9583B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EFB9DEBE-16B2-43D8-AA4B-0FE97C7DBAA1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EFB9DEBE-16B2-43D8-AA4B-0FE97C7DBAA1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EFB9DEBE-16B2-43D8-AA4B-0FE97C7DBAA1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EFB9DEBE-16B2-43D8-AA4B-0FE97C7DBAA1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1BF8CC87-5062-4CB0-AAC7-6330F0F9583B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1BF8CC87-5062-4CB0-AAC7-6330F0F9583B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1BF8CC87-5062-4CB0-AAC7-6330F0F9583B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1BF8CC87-5062-4CB0-AAC7-6330F0F9583B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
