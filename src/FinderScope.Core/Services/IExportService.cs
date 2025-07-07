@@ -22,6 +22,11 @@ namespace FinderScope.Core.Services
         /// HTML形式でエクスポート
         /// </summary>
         Task ExportToHtmlAsync(SearchResult searchResult, string filePath);
+
+        /// <summary>
+        /// TXT形式でエクスポート
+        /// </summary>
+        Task ExportToTxtAsync(SearchResult searchResult, string filePath);
     }
 
     /// <summary>
@@ -31,6 +36,7 @@ namespace FinderScope.Core.Services
     {
         Csv,
         Json,
-        Html
+        Html,
+        Txt
     }
 }

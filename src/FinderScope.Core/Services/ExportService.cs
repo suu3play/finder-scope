@@ -387,5 +387,99 @@ namespace FinderScope.Core.Services
             th, td { padding: 8px; }
         }";
         }
+
+        /// <summary>
+        /// TXT形式でエクスポート
+        /// </summary>
+        public async Task ExportToTxtAsync(SearchResult searchResult, string filePath)
+        {
+            var txt = new StringBuilder();
+            
+            // ヘッダー情報
+            txt.AppendLine("=== Finder Scope 検索結果 ===");
+            txt.AppendLine();
+            txt.AppendLine($"検索実行日時: {searchResult.SearchStartTime:yyyy年MM月dd日 HH:mm:ss}");
+            txt.AppendLine($"検索対象: {searchResult.Criteria.TargetFolder}");
+            
+            if (!string.IsNullOrWhiteSpace(searchResult.Criteria.FilenamePattern))
+                txt.AppendLine($"ファイル名パターン: {searchResult.Criteria.FilenamePattern}");
+            
+            if (searchResult.Criteria.FileExtensions.Any())
+                txt.AppendLine($"拡張子フィルタ: {string.Join(", ", searchResult.Criteria.FileExtensions)}");
+            
+            if (searchResult.Criteria.DateFrom.HasValue || searchResult.Criteria.DateTo.HasValue)
+            {
+                var dateRange = "";
+                if (searchResult.Criteria.DateFrom.HasValue)
+                    dateRange += $"開始: {searchResult.Criteria.DateFrom:yyyy/MM/dd}";
+                if (searchResult.Criteria.DateTo.HasValue)
+                {
+                    if (!string.IsNullOrEmpty(dateRange)) dateRange += " ";
+                    dateRange += $"終了: {searchResult.Criteria.DateTo:yyyy/MM/dd}";
+                }
+                txt.AppendLine($"更新日フィルタ: {dateRange}");
+            }
+            
+            if (!string.IsNullOrWhiteSpace(searchResult.Criteria.ContentPattern))
+                txt.AppendLine($"内容検索: {searchResult.Criteria.ContentPattern}");
+            
+            txt.AppendLine($"正規表現使用: {(searchResult.Criteria.UseRegex ? "有効" : "無効")}");
+            txt.AppendLine($"大文字小文字区別: {(searchResult.Criteria.CaseSensitive ? "有効" : "無効")}");
+            txt.AppendLine($"サブディレクトリ検索: {(searchResult.Criteria.IncludeSubdirectories ? "有効" : "無効")}");
+            
+            txt.AppendLine();
+            txt.AppendLine("=== 検索結果統計 ===");
+            txt.AppendLine($"スキャンファイル数: {searchResult.TotalFilesScanned:N0}件");
+            txt.AppendLine($"マッチファイル数: {searchResult.MatchCount:N0}件");
+            txt.AppendLine($"コンテンツマッチ数: {searchResult.TotalContentMatches:N0}件");
+            txt.AppendLine($"実行時間: {searchResult.SearchDurationSeconds:F2}秒");
+            
+            if (searchResult.FileMatches.Any())
+            {
+                txt.AppendLine();
+                txt.AppendLine("=== 検索結果一覧 ===");
+                
+                for (int i = 0; i < searchResult.FileMatches.Count; i++)
+                {
+                    var fileMatch = searchResult.FileMatches[i];
+                    txt.AppendLine();
+                    txt.AppendLine($"[{i + 1:D3}] {fileMatch.FileName}");
+                    txt.AppendLine($"     パス: {fileMatch.FilePath}");
+                    txt.AppendLine($"     サイズ: {fileMatch.FormattedSize}");
+                    txt.AppendLine($"     更新日時: {fileMatch.LastModified:yyyy/MM/dd HH:mm:ss}");
+                    
+                    if (fileMatch.MatchCount > 0)
+                    {
+                        txt.AppendLine($"     マッチ数: {fileMatch.MatchCount}件");
+                        var matchedTexts = fileMatch.GetAllMatchedTexts().Take(5).ToList();
+                        if (matchedTexts.Any())
+                        {
+                            txt.AppendLine("     マッチ内容:");
+                            foreach (var matchedText in matchedTexts)
+                            {
+                                txt.AppendLine($"       - {matchedText}");
+                            }
+                            if (fileMatch.MatchCount > 5)
+                            {
+                                txt.AppendLine($"       ... 他{fileMatch.MatchCount - 5}件");
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                txt.AppendLine();
+                txt.AppendLine("=== 検索結果 ===");
+                txt.AppendLine("マッチするファイルが見つかりませんでした。");
+            }
+            
+            txt.AppendLine();
+            txt.AppendLine("=== レポート作成情報 ===");
+            txt.AppendLine($"作成日時: {DateTime.Now:yyyy年MM月dd日 HH:mm:ss}");
+            txt.AppendLine("作成者: Finder Scope - 高性能ファイル検索ツール");
+
+            await File.WriteAllTextAsync(filePath, txt.ToString(), Encoding.UTF8);
+        }
     }
 }
