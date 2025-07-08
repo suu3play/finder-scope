@@ -22,6 +22,7 @@ namespace FinderScope.WPF.ViewModels
     {
         private readonly IFileSearchService _fileSearchService;
         private readonly IExportService _exportService;
+        private readonly IFilterService _filterService;
         private CancellationTokenSource? _searchCancellationTokenSource;
         private SearchResult? _lastSearchResult;
 
@@ -73,13 +74,21 @@ namespace FinderScope.WPF.ViewModels
         [ObservableProperty]
         private TimeSpan _elapsedTime;
 
-        public ObservableCollection<FileMatch> SearchResults { get; } = new();
+        [ObservableProperty]
+        private SearchFilter? _selectedFilter;
 
-        public MainWindowViewModel(IFileSearchService fileSearchService, IExportService exportService)
+        public ObservableCollection<FileMatch> SearchResults { get; } = new();
+        public ObservableCollection<SearchFilter> SavedFilters { get; } = new();
+
+        public MainWindowViewModel(IFileSearchService fileSearchService, IExportService exportService, IFilterService filterService)
         {
             _fileSearchService = fileSearchService;
             _exportService = exportService;
+            _filterService = filterService;
             _fileSearchService.ProgressChanged += OnSearchProgressChanged;
+            
+            // 保存済みフィルタの読み込み
+            _ = LoadSavedFiltersAsync();
         }
 
         [RelayCommand]
@@ -363,5 +372,173 @@ namespace FinderScope.WPF.ViewModels
                 ElapsedTime = e.ElapsedTime;
             });
         }
+
+        #region フィルタ関連メソッド
+
+        /// <summary>
+        /// 保存済みフィルタを読み込み
+        /// </summary>
+        private async Task LoadSavedFiltersAsync()
+        {
+            try
+            {
+                var filters = await _filterService.GetFiltersAsync();
+                SavedFilters.Clear();
+                
+                // 空のアイテムを先頭に追加（フィルタなし選択用）
+                SavedFilters.Add(new SearchFilter { Name = "-- フィルタなし --", Id = string.Empty });
+                
+                foreach (var filter in filters)
+                {
+                    SavedFilters.Add(filter);
+                }
+
+                // デフォルトフィルタがある場合は適用
+                var defaultFilter = await _filterService.GetDefaultFilterAsync();
+                if (defaultFilter != null)
+                {
+                    SelectedFilter = SavedFilters.FirstOrDefault(f => f.Id == defaultFilter.Id);
+                    if (SelectedFilter != null)
+                    {
+                        ApplyFilter(SelectedFilter);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                WinMessageBox.Show($"フィルタの読み込みでエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        /// <summary>
+        /// フィルタを適用
+        /// </summary>
+        [RelayCommand]
+        private async Task ApplySelectedFilterAsync()
+        {
+            if (SelectedFilter != null && !string.IsNullOrEmpty(SelectedFilter.Id))
+            {
+                ApplyFilter(SelectedFilter);
+                await _filterService.RecordFilterUsageAsync(SelectedFilter.Id);
+            }
+        }
+
+        /// <summary>
+        /// フィルタを検索条件に適用
+        /// </summary>
+        private void ApplyFilter(SearchFilter filter)
+        {
+            if (string.IsNullOrEmpty(filter.Id)) return; // "フィルタなし"の場合は何もしない
+
+            var criteria = filter.Criteria;
+            TargetFolder = criteria.TargetFolder;
+            FilenamePattern = criteria.FilenamePattern ?? string.Empty;
+            FileExtensions = string.Join(", ", criteria.FileExtensions);
+            DateFrom = criteria.DateFrom;
+            DateTo = criteria.DateTo;
+            ContentPattern = criteria.ContentPattern ?? string.Empty;
+            UseRegex = criteria.UseRegex;
+            CaseSensitive = criteria.CaseSensitive;
+            IncludeSubdirectories = criteria.IncludeSubdirectories;
+        }
+
+        /// <summary>
+        /// 現在の検索条件をフィルタとして保存
+        /// </summary>
+        [RelayCommand]
+        private async Task SaveCurrentFilterAsync()
+        {
+            try
+            {
+                var criteria = CreateSearchCriteria();
+                if (!criteria.IsValid())
+                {
+                    WinMessageBox.Show("有効な検索条件を入力してからフィルタを保存してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                var dialog = new Views.SaveFilterDialog();
+                var viewModel = new SaveFilterDialogViewModel(_filterService)
+                {
+                    SearchCriteria = criteria
+                };
+                
+                // 推奨名を生成
+                viewModel.GenerateSuggestedName();
+                
+                dialog.DataContext = viewModel;
+                dialog.Owner = System.Windows.Application.Current.MainWindow;
+
+                if (dialog.ShowDialog() == true && viewModel.DialogResult)
+                {
+                    // フィルタリストを再読み込み
+                    await LoadSavedFiltersAsync();
+                    WinMessageBox.Show("フィルタが保存されました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                WinMessageBox.Show($"フィルタの保存でエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// 選択したフィルタを削除
+        /// </summary>
+        [RelayCommand]
+        private async Task DeleteSelectedFilterAsync()
+        {
+            if (SelectedFilter == null || string.IsNullOrEmpty(SelectedFilter.Id))
+            {
+                WinMessageBox.Show("削除するフィルタを選択してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var result = WinMessageBox.Show(
+                $"フィルタ「{SelectedFilter.Name}」を削除しますか？", 
+                "確認", 
+                MessageBoxButton.YesNo, 
+                MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    await _filterService.DeleteFilterAsync(SelectedFilter.Id);
+                    await LoadSavedFiltersAsync();
+                    WinMessageBox.Show("フィルタが削除されました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    WinMessageBox.Show($"フィルタの削除でエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 選択したフィルタをデフォルトに設定
+        /// </summary>
+        [RelayCommand]
+        private async Task SetAsDefaultFilterAsync()
+        {
+            if (SelectedFilter == null || string.IsNullOrEmpty(SelectedFilter.Id))
+            {
+                WinMessageBox.Show("デフォルトに設定するフィルタを選択してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            try
+            {
+                await _filterService.SetDefaultFilterAsync(SelectedFilter.Id);
+                await LoadSavedFiltersAsync();
+                WinMessageBox.Show($"フィルタ「{SelectedFilter.Name}」をデフォルトに設定しました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                WinMessageBox.Show($"デフォルト設定でエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        #endregion
     }
 }

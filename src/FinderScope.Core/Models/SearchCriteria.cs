@@ -44,6 +44,31 @@ namespace FinderScope.Core.Models
         }
 
         /// <summary>
+        /// 検索条件が有効かどうかをチェック
+        /// </summary>
+        public bool IsValid()
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(TargetFolder))
+                    return false;
+
+                if (!Directory.Exists(TargetFolder))
+                    return false;
+
+                // 日付範囲の検証
+                if (DateFrom.HasValue && DateTo.HasValue && DateFrom > DateTo)
+                    return false;
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
         /// 検索条件の概要説明を取得
         /// </summary>
         public string GetSummary()

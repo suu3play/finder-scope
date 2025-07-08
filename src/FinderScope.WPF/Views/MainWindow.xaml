@@ -25,6 +25,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="120"/>
@@ -66,8 +67,22 @@
                     <CheckBox Content="サブディレクトリを含む" IsChecked="{Binding IncludeSubdirectories}"/>
                 </StackPanel>
 
+                <!-- フィルタ選択 -->
+                <Label Grid.Row="6" Grid.Column="0" Content="保存フィルタ:" VerticalAlignment="Center" Margin="0,5,0,0"/>
+                <StackPanel Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,5,0,0">
+                    <ComboBox ItemsSource="{Binding SavedFilters}" 
+                              SelectedItem="{Binding SelectedFilter}"
+                              DisplayMemberPath="Name"
+                              Width="200" 
+                              Margin="0,0,10,0"/>
+                    <Button Content="適用" Command="{Binding ApplySelectedFilterCommand}" Width="60" Height="25" Margin="0,0,10,0"/>
+                    <Button Content="保存" Command="{Binding SaveCurrentFilterCommand}" Width="60" Height="25" Margin="0,0,10,0"/>
+                    <Button Content="削除" Command="{Binding DeleteSelectedFilterCommand}" Width="60" Height="25" Margin="0,0,10,0"/>
+                    <Button Content="デフォルト" Command="{Binding SetAsDefaultFilterCommand}" Width="80" Height="25"/>
+                </StackPanel>
+
                 <!-- 実行ボタン -->
-                <StackPanel Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                <StackPanel Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
                     <Button Content="検索開始" Command="{Binding StartSearchCommand}" Width="80" Height="30" Margin="0,0,10,0"
                             IsEnabled="{Binding IsSearching, Converter={StaticResource InverseBooleanConverter}}"/>
                     <Button Content="キャンセル" Command="{Binding CancelSearchCommand}" Width="80" Height="30" Margin="0,0,10,0"
