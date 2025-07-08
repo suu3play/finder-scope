@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:FinderScope.WPF.Views"
         mc:Ignorable="d"
         Title="Finder Scope - 高性能ファイル検索ツール" 
         Height="700" Width="1200"
@@ -79,11 +80,27 @@
 
                 <!-- オプション -->
                 <Label Grid.Row="4" Grid.Column="0" Content="オプション:" VerticalAlignment="Center" Margin="0,5,0,0"/>
-                <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,5,0,0">
-                    <CheckBox Content="正規表現を使用" IsChecked="{Binding UseRegex}" Margin="0,0,20,0"/>
-                    <CheckBox Content="大文字小文字を区別" IsChecked="{Binding CaseSensitive}" Margin="0,0,20,0"/>
-                    <CheckBox Content="サブディレクトリを含む" IsChecked="{Binding IncludeSubdirectories}"/>
-                </StackPanel>
+                <Grid Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,5,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- 基本オプション -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal">
+                        <CheckBox Content="正規表現を使用" IsChecked="{Binding UseRegex}" Margin="0,0,20,0"/>
+                        <CheckBox Content="大文字小文字を区別" IsChecked="{Binding CaseSensitive}" Margin="0,0,20,0"/>
+                        <CheckBox Content="サブディレクトリを含む" IsChecked="{Binding IncludeSubdirectories}" Margin="0,0,20,0"/>
+                        <CheckBox Content="自動再検索" IsChecked="{Binding EnableAutoSearch}" Margin="0,0,20,0"
+                                  ToolTip="条件変更後1秒で自動的に再検索を実行"/>
+                    </StackPanel>
+                    
+                    <!-- 追加オプション -->
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5,0,0">
+                        <CheckBox Content="大文字小文字を区別しない" IsChecked="{Binding CaseInsensitive}" Margin="0,0,20,0"/>
+                        <CheckBox Content="単語単位で検索" IsChecked="{Binding WholeWordOnly}" Margin="0,0,20,0"/>
+                    </StackPanel>
+                </Grid>
 
                 <!-- フィルタ選択 -->
                 <Label Grid.Row="5" Grid.Column="0" Content="保存フィルタ:" VerticalAlignment="Center" Margin="0,5,0,0"/>
@@ -125,12 +142,13 @@
                 </Grid.RowDefinitions>
 
                 <!-- 進行状況 -->
-                <Grid Grid.Row="0" Margin="0,0,0,10">
+                <Grid Grid.Row="0" Margin="0,0,0,10" Visibility="{Binding IsSearching, Converter={x:Static local:BooleanToVisibilityConverter.Instance}}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <ProgressBar Grid.Column="0" Value="{Binding ProgressPercentage}" Height="20" Margin="0,0,10,0"/>
+                    <ProgressBar Grid.Column="0" Value="{Binding ProgressPercentage}" Height="20" Margin="0,0,10,0" 
+                                 IsIndeterminate="{Binding IsSearching}"/>
                     <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="0,0,0,0">
                         <Run Text="{Binding FilesScanned, StringFormat='{}{0:N0}'}"/>
                         <Run Text="ファイル走査 /"/>
