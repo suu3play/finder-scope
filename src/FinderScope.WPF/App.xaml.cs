@@ -19,6 +19,7 @@ namespace FinderScope.WPF
                     // Core Services
                     services.AddSingleton<IFileSearchService, FileSearchService>();
                     services.AddSingleton<IExportService, ExportService>();
+                    services.AddSingleton<IFilterService, FilterService>();
                     
                     // ViewModels
                     services.AddTransient<MainWindowViewModel>();
