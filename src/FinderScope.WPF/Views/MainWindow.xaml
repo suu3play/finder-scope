@@ -25,7 +25,6 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="120"/>
@@ -38,38 +37,57 @@
                 <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding TargetFolder}" VerticalAlignment="Center" Margin="0,0,5,0"/>
                 <Button Grid.Row="0" Grid.Column="2" Content="参照..." Command="{Binding BrowseFolderCommand}" Width="60"/>
 
-                <!-- ファイル名パターン -->
+                <!-- ファイル名 -->
                 <Label Grid.Row="1" Grid.Column="0" Content="ファイル名:" VerticalAlignment="Center" Margin="0,5,0,0"/>
-                <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding FilenamePattern}" VerticalAlignment="Center" Margin="0,5,0,0"/>
-
-                <!-- 拡張子 -->
-                <Label Grid.Row="2" Grid.Column="0" Content="拡張子:" VerticalAlignment="Center" Margin="0,5,0,0"/>
-                <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding FileExtensions}" VerticalAlignment="Center" Margin="0,5,0,0"
-                         ToolTip="カンマ区切りで複数指定可能 (例: .txt,.log,.cs)"/>
+                <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,5,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- ファイル名パターン入力 -->
+                    <TextBox Grid.Row="0" Text="{Binding FilenamePattern}" Height="25" 
+                             ToolTip="ファイル名パターン (ワイルドカード * ? 使用可能)"/>
+                    
+                    <!-- 拡張子選択 -->
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5,0,0">
+                        <TextBlock Text="拡張子:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBox Text="{Binding FileExtensions}" Width="200" Height="25" 
+                                 ToolTip="カンマ区切りで複数指定 (例: .txt,.log,.cs)"/>
+                        <TextBlock Text="よく使う:" VerticalAlignment="Center" Margin="10,0,5,0"/>
+                        <CheckBox Content=".txt" IsChecked="{Binding IsTxtSelected}" Margin="0,0,10,0"/>
+                        <CheckBox Content=".log" IsChecked="{Binding IsLogSelected}" Margin="0,0,10,0"/>
+                        <CheckBox Content=".cs" IsChecked="{Binding IsCsSelected}" Margin="0,0,10,0"/>
+                        <CheckBox Content=".js" IsChecked="{Binding IsJsSelected}" Margin="0,0,10,0"/>
+                        <CheckBox Content=".py" IsChecked="{Binding IsPySelected}" Margin="0,0,10,0"/>
+                        <CheckBox Content=".xml" IsChecked="{Binding IsXmlSelected}" Margin="0,0,10,0"/>
+                        <CheckBox Content=".json" IsChecked="{Binding IsJsonSelected}"/>
+                    </StackPanel>
+                </Grid>
 
                 <!-- 日付範囲 -->
-                <Label Grid.Row="3" Grid.Column="0" Content="更新日:" VerticalAlignment="Center" Margin="0,5,0,0"/>
-                <StackPanel Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,5,0,0">
+                <Label Grid.Row="2" Grid.Column="0" Content="更新日:" VerticalAlignment="Center" Margin="0,5,0,0"/>
+                <StackPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,5,0,0">
                     <DatePicker SelectedDate="{Binding DateFrom}" Width="120" Margin="0,0,10,0"/>
                     <Label Content="〜" VerticalAlignment="Center"/>
                     <DatePicker SelectedDate="{Binding DateTo}" Width="120" Margin="10,0,0,0"/>
                 </StackPanel>
 
                 <!-- ファイル内容 -->
-                <Label Grid.Row="4" Grid.Column="0" Content="ファイル内容:" VerticalAlignment="Center" Margin="0,5,0,0"/>
-                <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding ContentPattern}" VerticalAlignment="Center" Margin="0,5,0,0"/>
+                <Label Grid.Row="3" Grid.Column="0" Content="ファイル内容:" VerticalAlignment="Center" Margin="0,5,0,0"/>
+                <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding ContentPattern}" VerticalAlignment="Center" Margin="0,5,0,0"/>
 
                 <!-- オプション -->
-                <Label Grid.Row="5" Grid.Column="0" Content="オプション:" VerticalAlignment="Center" Margin="0,5,0,0"/>
-                <StackPanel Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,5,0,0">
+                <Label Grid.Row="4" Grid.Column="0" Content="オプション:" VerticalAlignment="Center" Margin="0,5,0,0"/>
+                <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,5,0,0">
                     <CheckBox Content="正規表現を使用" IsChecked="{Binding UseRegex}" Margin="0,0,20,0"/>
                     <CheckBox Content="大文字小文字を区別" IsChecked="{Binding CaseSensitive}" Margin="0,0,20,0"/>
                     <CheckBox Content="サブディレクトリを含む" IsChecked="{Binding IncludeSubdirectories}"/>
                 </StackPanel>
 
                 <!-- フィルタ選択 -->
-                <Label Grid.Row="6" Grid.Column="0" Content="保存フィルタ:" VerticalAlignment="Center" Margin="0,5,0,0"/>
-                <StackPanel Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,5,0,0">
+                <Label Grid.Row="5" Grid.Column="0" Content="保存フィルタ:" VerticalAlignment="Center" Margin="0,5,0,0"/>
+                <StackPanel Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,5,0,0">
                     <ComboBox ItemsSource="{Binding SavedFilters}" 
                               SelectedItem="{Binding SelectedFilter}"
                               DisplayMemberPath="Name"
@@ -82,7 +100,7 @@
                 </StackPanel>
 
                 <!-- 実行ボタン -->
-                <StackPanel Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                <StackPanel Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
                     <Button Content="検索開始" Command="{Binding StartSearchCommand}" Width="80" Height="30" Margin="0,0,10,0"
                             IsEnabled="{Binding IsSearching, Converter={StaticResource InverseBooleanConverter}}"/>
                     <Button Content="キャンセル" Command="{Binding CancelSearchCommand}" Width="80" Height="30" Margin="0,0,10,0"

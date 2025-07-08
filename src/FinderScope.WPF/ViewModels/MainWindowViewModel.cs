@@ -77,6 +77,28 @@ namespace FinderScope.WPF.ViewModels
         [ObservableProperty]
         private SearchFilter? _selectedFilter;
 
+        // 拡張子選択用プロパティ
+        [ObservableProperty]
+        private bool _isTxtSelected;
+
+        [ObservableProperty]
+        private bool _isLogSelected;
+
+        [ObservableProperty]
+        private bool _isCsSelected;
+
+        [ObservableProperty]
+        private bool _isJsSelected;
+
+        [ObservableProperty]
+        private bool _isPySelected;
+
+        [ObservableProperty]
+        private bool _isXmlSelected;
+
+        [ObservableProperty]
+        private bool _isJsonSelected;
+
         public ObservableCollection<FileMatch> SearchResults { get; } = new();
         public ObservableCollection<SearchFilter> SavedFilters { get; } = new();
 
@@ -89,6 +111,38 @@ namespace FinderScope.WPF.ViewModels
             
             // 保存済みフィルタの読み込み
             _ = LoadSavedFiltersAsync();
+        }
+
+        partial void OnIsTxtSelectedChanged(bool value) => UpdateFileExtensions();
+        partial void OnIsLogSelectedChanged(bool value) => UpdateFileExtensions();
+        partial void OnIsCsSelectedChanged(bool value) => UpdateFileExtensions();
+        partial void OnIsJsSelectedChanged(bool value) => UpdateFileExtensions();
+        partial void OnIsPySelectedChanged(bool value) => UpdateFileExtensions();
+        partial void OnIsXmlSelectedChanged(bool value) => UpdateFileExtensions();
+        partial void OnIsJsonSelectedChanged(bool value) => UpdateFileExtensions();
+
+        private void UpdateFileExtensions()
+        {
+            var extensions = new List<string>();
+            
+            if (IsTxtSelected) extensions.Add(".txt");
+            if (IsLogSelected) extensions.Add(".log");
+            if (IsCsSelected) extensions.Add(".cs");
+            if (IsJsSelected) extensions.Add(".js");
+            if (IsPySelected) extensions.Add(".py");
+            if (IsXmlSelected) extensions.Add(".xml");
+            if (IsJsonSelected) extensions.Add(".json");
+
+            // 既存の手入力拡張子と統合
+            var currentExtensions = FileExtensions
+                .Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(ext => ext.Trim())
+                .Where(ext => !string.IsNullOrWhiteSpace(ext))
+                .Where(ext => !extensions.Contains(ext, StringComparer.OrdinalIgnoreCase))
+                .ToList();
+
+            extensions.AddRange(currentExtensions);
+            FileExtensions = string.Join(", ", extensions.Distinct());
         }
 
         [RelayCommand]
