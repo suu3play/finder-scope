@@ -77,7 +77,8 @@
                     <!-- エクスポートボタン -->
                     <Button Content="CSV出力" Command="{Binding ExportToCsvCommand}" Width="80" Height="30" Margin="0,0,5,0"/>
                     <Button Content="JSON出力" Command="{Binding ExportToJsonCommand}" Width="80" Height="30" Margin="0,0,5,0"/>
-                    <Button Content="HTML出力" Command="{Binding ExportToHtmlCommand}" Width="80" Height="30"/>
+                    <Button Content="HTML出力" Command="{Binding ExportToHtmlCommand}" Width="80" Height="30" Margin="0,0,5,0"/>
+                    <Button Content="TXT出力" Command="{Binding ExportToTxtCommand}" Width="80" Height="30"/>
                 </StackPanel>
             </Grid>
         </GroupBox>

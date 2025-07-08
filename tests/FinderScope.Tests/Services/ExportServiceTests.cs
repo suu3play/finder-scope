@@ -187,6 +187,51 @@ namespace FinderScope.Tests.Services
         }
 
         [Test]
+        public async Task ExportToTxtAsync_CreatesValidTxtFile()
+        {
+            // Arrange
+            var txtPath = Path.Combine(_tempDirectory, "test.txt");
+
+            // Act
+            await _exportService.ExportToTxtAsync(_testSearchResult, txtPath);
+
+            // Assert
+            File.Exists(txtPath).Should().BeTrue();
+            
+            var txtContent = await File.ReadAllTextAsync(txtPath);
+            txtContent.Should().NotBeNullOrWhiteSpace();
+            txtContent.Should().Contain("=== Finder Scope 検索結果 ===");
+            txtContent.Should().Contain("test1.txt");
+            txtContent.Should().Contain("test2.log");
+            txtContent.Should().Contain("検索結果統計");
+            txtContent.Should().Contain("検索結果一覧");
+        }
+
+        [Test]
+        public async Task ExportToTxtAsync_WithEmptyResults_CreatesValidFile()
+        {
+            // Arrange
+            var emptyResult = new SearchResult
+            {
+                Criteria = new SearchCriteria { TargetFolder = @"C:\Empty" },
+                SearchStartTime = DateTime.Now,
+                SearchDurationSeconds = 0.1,
+                TotalFilesScanned = 0
+            };
+            var txtPath = Path.Combine(_tempDirectory, "empty.txt");
+
+            // Act
+            await _exportService.ExportToTxtAsync(emptyResult, txtPath);
+
+            // Assert
+            File.Exists(txtPath).Should().BeTrue();
+            
+            var txtContent = await File.ReadAllTextAsync(txtPath);
+            txtContent.Should().Contain("=== Finder Scope 検索結果 ===");
+            txtContent.Should().Contain("マッチするファイルが見つかりませんでした。");
+        }
+
+        [Test]
         public void ExportToCsvAsync_WithInvalidPath_ThrowsException()
         {
             // Arrange

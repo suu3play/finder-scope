@@ -250,6 +250,12 @@ namespace FinderScope.WPF.ViewModels
             await ExportResultsAsync(ExportFormat.Html, "HTML ファイル (*.html)|*.html");
         }
 
+        [RelayCommand]
+        private async Task ExportToTxtAsync()
+        {
+            await ExportResultsAsync(ExportFormat.Txt, "テキスト ファイル (*.txt)|*.txt");
+        }
+
         private async Task ExportResultsAsync(ExportFormat format, string filter)
         {
             if (_lastSearchResult == null || !_lastSearchResult.FileMatches.Any())
@@ -280,14 +286,46 @@ namespace FinderScope.WPF.ViewModels
                         case ExportFormat.Html:
                             await _exportService.ExportToHtmlAsync(_lastSearchResult, saveDialog.FileName);
                             break;
+                        case ExportFormat.Txt:
+                            await _exportService.ExportToTxtAsync(_lastSearchResult, saveDialog.FileName);
+                            break;
                     }
 
-                    WinMessageBox.Show($"エクスポートが完了しました。\n{saveDialog.FileName}", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
+                    // エクスポート完了ダイアログを表示し、ファイルを開くかどうか確認
+                    var result = WinMessageBox.Show(
+                        $"エクスポートが完了しました。\n{saveDialog.FileName}\n\nファイルを開きますか？", 
+                        "エクスポート完了", 
+                        MessageBoxButton.YesNo, 
+                        MessageBoxImage.Information);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        OpenExportedFile(saveDialog.FileName);
+                    }
                 }
                 catch (Exception ex)
                 {
                     WinMessageBox.Show($"エクスポート中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
+            }
+        }
+
+        /// <summary>
+        /// エクスポートされたファイルを開く
+        /// </summary>
+        private void OpenExportedFile(string filePath)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = filePath,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                WinMessageBox.Show($"ファイルを開けませんでした: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
