@@ -19,6 +19,8 @@ namespace FinderScope.Core.Models
         public bool UseRegex { get; set; } = false;
         public bool CaseSensitive { get; set; } = false;
         public bool IncludeSubdirectories { get; set; } = true;
+        public bool CaseInsensitive { get; set; } = true;
+        public bool WholeWordOnly { get; set; } = false;
 
         /// <summary>
         /// 検索条件の検証

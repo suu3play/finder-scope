@@ -18,13 +18,17 @@ namespace FinderScope.WPF.ViewModels
     /// <summary>
     /// メインウィンドウのViewModel
     /// </summary>
-    public partial class MainWindowViewModel : ObservableObject
+    public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         private readonly IFileSearchService _fileSearchService;
         private readonly IExportService _exportService;
         private readonly IFilterService _filterService;
+        private readonly IFileIndexService _fileIndexService;
+        private readonly ISearchHistoryService _searchHistoryService;
         private CancellationTokenSource? _searchCancellationTokenSource;
         private SearchResult? _lastSearchResult;
+        private Timer? _autoSearchTimer;
+        private DateTime _lastSearchTime;
 
         [ObservableProperty]
         private string _targetFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
@@ -99,18 +103,32 @@ namespace FinderScope.WPF.ViewModels
         [ObservableProperty]
         private bool _isJsonSelected;
 
+        [ObservableProperty]
+        private bool _enableAutoSearch = false;
+
+        [ObservableProperty]
+        private bool _caseInsensitive = true;
+
+        [ObservableProperty]
+        private bool _wholeWordOnly = false;
+
         public ObservableCollection<FileMatch> SearchResults { get; } = new();
         public ObservableCollection<SearchFilter> SavedFilters { get; } = new();
 
-        public MainWindowViewModel(IFileSearchService fileSearchService, IExportService exportService, IFilterService filterService)
+        public MainWindowViewModel(IFileSearchService fileSearchService, IExportService exportService, IFilterService filterService, IFileIndexService fileIndexService, ISearchHistoryService searchHistoryService)
         {
             _fileSearchService = fileSearchService;
             _exportService = exportService;
             _filterService = filterService;
+            _fileIndexService = fileIndexService;
+            _searchHistoryService = searchHistoryService;
             _fileSearchService.ProgressChanged += OnSearchProgressChanged;
             
             // 保存済みフィルタの読み込み
             _ = LoadSavedFiltersAsync();
+            
+            // 自動検索タイマーの初期化
+            InitializeAutoSearchTimer();
         }
 
         partial void OnIsTxtSelectedChanged(bool value) => UpdateFileExtensions();
@@ -120,6 +138,12 @@ namespace FinderScope.WPF.ViewModels
         partial void OnIsPySelectedChanged(bool value) => UpdateFileExtensions();
         partial void OnIsXmlSelectedChanged(bool value) => UpdateFileExtensions();
         partial void OnIsJsonSelectedChanged(bool value) => UpdateFileExtensions();
+
+        partial void OnTargetFolderChanged(string value) => TriggerAutoSearch();
+        partial void OnFilenamePatternChanged(string value) => TriggerAutoSearch();
+        partial void OnContentPatternChanged(string value) => TriggerAutoSearch();
+        partial void OnFileExtensionsChanged(string value) => TriggerAutoSearch();
+        partial void OnEnableAutoSearchChanged(bool value) => ToggleAutoSearch(value);
 
         private void UpdateFileExtensions()
         {
@@ -411,7 +435,9 @@ namespace FinderScope.WPF.ViewModels
                 ContentPattern = string.IsNullOrWhiteSpace(ContentPattern) ? null : ContentPattern,
                 UseRegex = UseRegex,
                 CaseSensitive = CaseSensitive,
-                IncludeSubdirectories = IncludeSubdirectories
+                IncludeSubdirectories = IncludeSubdirectories,
+                CaseInsensitive = CaseInsensitive,
+                WholeWordOnly = WholeWordOnly
             };
         }
 
@@ -591,6 +617,88 @@ namespace FinderScope.WPF.ViewModels
             {
                 WinMessageBox.Show($"デフォルト設定でエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        #endregion
+
+        #region 自動検索機能
+
+        /// <summary>
+        /// 自動検索タイマーの初期化
+        /// </summary>
+        private void InitializeAutoSearchTimer()
+        {
+            _autoSearchTimer = new Timer(AutoSearchCallback, null, Timeout.Infinite, Timeout.Infinite);
+        }
+
+        /// <summary>
+        /// 自動検索のトリガー
+        /// </summary>
+        private void TriggerAutoSearch()
+        {
+            if (!EnableAutoSearch || IsSearching) return;
+
+            _lastSearchTime = DateTime.Now;
+            _autoSearchTimer?.Change(1000, Timeout.Infinite); // 1秒後に実行
+        }
+
+        /// <summary>
+        /// 自動検索の有効/無効切り替え
+        /// </summary>
+        private void ToggleAutoSearch(bool enabled)
+        {
+            if (!enabled)
+            {
+                _autoSearchTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+            }
+        }
+
+        /// <summary>
+        /// 自動検索コールバック
+        /// </summary>
+        private async void AutoSearchCallback(object? state)
+        {
+            // 最後の変更から1秒経過していない場合はスキップ
+            if (DateTime.Now - _lastSearchTime < TimeSpan.FromSeconds(1))
+                return;
+
+            if (!EnableAutoSearch || IsSearching)
+                return;
+
+            try
+            {
+                // UIスレッドで検索を実行
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
+                {
+                    await StartSearchAsync();
+                });
+            }
+            catch
+            {
+                // 自動検索のエラーは無視
+            }
+        }
+
+        #endregion
+
+        #region IDisposable
+
+        /// <summary>
+        /// リソースの解放
+        /// </summary>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _autoSearchTimer?.Dispose();
+                _searchCancellationTokenSource?.Dispose();
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         #endregion
