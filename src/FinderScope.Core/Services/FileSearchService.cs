@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using FinderScope.Core.Models;
+using FinderScope.Core.Utilities;
 
 namespace FinderScope.Core.Services
 {
@@ -259,17 +260,35 @@ namespace FinderScope.Core.Services
         }
 
         /// <summary>
-        /// パターンマッチング
+        /// パターンマッチング（ワイルドカード、正規表現、部分一致に対応）
         /// </summary>
         private bool MatchesPattern(string text, string pattern, bool useRegex, bool caseSensitive)
         {
+            if (string.IsNullOrEmpty(pattern))
+                return true;
+
             if (useRegex)
             {
-                var options = caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase;
-                return Regex.IsMatch(text, pattern, options);
+                try
+                {
+                    var options = caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase;
+                    return Regex.IsMatch(text, pattern, options);
+                }
+                catch (ArgumentException)
+                {
+                    // 正規表現が無効な場合は部分一致で処理
+                    var comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+                    return text.Contains(pattern, comparison);
+                }
+            }
+            else if (WildcardMatcher.ContainsWildcards(pattern))
+            {
+                // ワイルドカードパターンの場合
+                return WildcardMatcher.IsMatchAny(text, pattern, caseSensitive);
             }
             else
             {
+                // 通常の部分一致
                 var comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
                 return text.Contains(pattern, comparison);
             }

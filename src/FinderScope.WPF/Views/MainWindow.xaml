@@ -11,12 +11,36 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <!-- メニューバー -->
+        <Menu Grid.Row="0">
+            <MenuItem Header="ファイル(_F)">
+                <MenuItem Header="CSV出力(_C)" Command="{Binding ExportToCsvCommand}"/>
+                <MenuItem Header="終了(_X)" Click="ExitMenuItem_Click"/>
+            </MenuItem>
+            <MenuItem Header="フィルタ(_I)">
+                <MenuItem Header="保存済みフィルタ(_S)" ItemsSource="{Binding SavedFilters}">
+                    <MenuItem.ItemTemplate>
+                        <DataTemplate>
+                            <MenuItem Header="{Binding Name}" Command="{Binding DataContext.ApplyFilterCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                        </DataTemplate>
+                    </MenuItem.ItemTemplate>
+                </MenuItem>
+                <Separator/>
+                <MenuItem Header="現在の条件を保存(_C)" Command="{Binding SaveCurrentFilterCommand}"/>
+                <MenuItem Header="フィルタ管理(_M)" Command="{Binding OpenFilterManagerCommand}"/>
+            </MenuItem>
+            <MenuItem Header="設定(_S)">
+                <MenuItem Header="その他設定(_O)"/>
+            </MenuItem>
+        </Menu>
+
         <!-- 検索条件パネル -->
-        <GroupBox Grid.Row="0" Header="検索条件" Margin="10" Padding="10">
+        <GroupBox Grid.Row="1" Header="検索条件" Margin="10" Padding="10">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -40,127 +64,170 @@
 
                 <!-- ファイル名 -->
                 <Label Grid.Row="1" Grid.Column="0" Content="ファイル名:" VerticalAlignment="Center" Margin="0,5,0,0"/>
-                <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,5,0,0">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+                <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding FilenamePattern}" Height="25" Margin="0,5,0,0"
+                         ToolTip="ファイル名パターン (拡張子含む、ワイルドカード * ? 使用可能、例: *.txt, test.log)"/>
+
+                <!-- ファイルカテゴリと拡張子選択 -->
+                <Label Grid.Row="2" Grid.Column="0" Content="ファイル種別:" VerticalAlignment="Center" Margin="0,5,0,0"/>
+                <Grid Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" VerticalAlignment="Center" Margin="0,5,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
                     
-                    <!-- ファイル名パターン入力 -->
-                    <TextBox Grid.Row="0" Text="{Binding FilenamePattern}" Height="25" 
-                             ToolTip="ファイル名パターン (ワイルドカード * ? 使用可能)"/>
+                    <!-- カテゴリ選択（ラジオボタン） -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <RadioButton Content="ドキュメント" IsChecked="{Binding IsDocumentCategorySelected}" GroupName="FileCategory" Margin="0,0,15,0"/>
+                        <RadioButton Content="プログラムコード" IsChecked="{Binding IsCodeCategorySelected}" GroupName="FileCategory" Margin="0,0,15,0"/>
+                        <RadioButton Content="Web・マークアップ" IsChecked="{Binding IsWebCategorySelected}" GroupName="FileCategory" Margin="0,0,15,0"/>
+                        <RadioButton Content="すべて" IsChecked="{Binding IsAllCategorySelected}" GroupName="FileCategory"/>
+                    </StackPanel>
                     
-                    <!-- 拡張子選択 -->
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5,0,0">
-                        <TextBlock Text="拡張子:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBox Text="{Binding FileExtensions}" Width="200" Height="25" 
-                                 ToolTip="カンマ区切りで複数指定 (例: .txt,.log,.cs)"/>
-                        <TextBlock Text="よく使う:" VerticalAlignment="Center" Margin="10,0,5,0"/>
-                        <CheckBox Content=".txt" IsChecked="{Binding IsTxtSelected}" Margin="0,0,10,0"/>
-                        <CheckBox Content=".log" IsChecked="{Binding IsLogSelected}" Margin="0,0,10,0"/>
-                        <CheckBox Content=".cs" IsChecked="{Binding IsCsSelected}" Margin="0,0,10,0"/>
-                        <CheckBox Content=".js" IsChecked="{Binding IsJsSelected}" Margin="0,0,10,0"/>
-                        <CheckBox Content=".py" IsChecked="{Binding IsPySelected}" Margin="0,0,10,0"/>
-                        <CheckBox Content=".xml" IsChecked="{Binding IsXmlSelected}" Margin="0,0,10,0"/>
-                        <CheckBox Content=".json" IsChecked="{Binding IsJsonSelected}"/>
+                    <!-- 拡張子ボタン -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0">
+                        <ToggleButton Content=".txt" IsChecked="{Binding IsTxtSelected}" Width="40" Height="25" Margin="0,0,5,0">
+                            <ToggleButton.Style>
+                                <Style TargetType="ToggleButton">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsTxtVisible}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ToggleButton.Style>
+                        </ToggleButton>
+                        <ToggleButton Content=".log" IsChecked="{Binding IsLogSelected}" Width="40" Height="25" Margin="0,0,5,0">
+                            <ToggleButton.Style>
+                                <Style TargetType="ToggleButton">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsLogVisible}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ToggleButton.Style>
+                        </ToggleButton>
+                        <ToggleButton Content=".cs" IsChecked="{Binding IsCsSelected}" Width="35" Height="25" Margin="0,0,5,0">
+                            <ToggleButton.Style>
+                                <Style TargetType="ToggleButton">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsCsVisible}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ToggleButton.Style>
+                        </ToggleButton>
+                        <ToggleButton Content=".js" IsChecked="{Binding IsJsSelected}" Width="35" Height="25" Margin="0,0,5,0">
+                            <ToggleButton.Style>
+                                <Style TargetType="ToggleButton">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsJsVisible}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ToggleButton.Style>
+                        </ToggleButton>
+                        <ToggleButton Content=".py" IsChecked="{Binding IsPySelected}" Width="35" Height="25" Margin="0,0,5,0">
+                            <ToggleButton.Style>
+                                <Style TargetType="ToggleButton">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsPyVisible}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ToggleButton.Style>
+                        </ToggleButton>
+                        <ToggleButton Content=".xml" IsChecked="{Binding IsXmlSelected}" Width="40" Height="25" Margin="0,0,5,0">
+                            <ToggleButton.Style>
+                                <Style TargetType="ToggleButton">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsXmlVisible}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ToggleButton.Style>
+                        </ToggleButton>
+                        <ToggleButton Content=".json" IsChecked="{Binding IsJsonSelected}" Width="45" Height="25" Margin="0,0,5,0">
+                            <ToggleButton.Style>
+                                <Style TargetType="ToggleButton">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsJsonVisible}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ToggleButton.Style>
+                        </ToggleButton>
                     </StackPanel>
                 </Grid>
 
                 <!-- 日付範囲 -->
-                <Label Grid.Row="2" Grid.Column="0" Content="更新日:" VerticalAlignment="Center" Margin="0,5,0,0"/>
-                <StackPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,5,0,0">
+                <Label Grid.Row="3" Grid.Column="0" Content="更新日:" VerticalAlignment="Center" Margin="0,5,0,0"/>
+                <StackPanel Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,5,0,0">
                     <DatePicker SelectedDate="{Binding DateFrom}" Width="120" Margin="0,0,10,0"/>
                     <Label Content="〜" VerticalAlignment="Center"/>
                     <DatePicker SelectedDate="{Binding DateTo}" Width="120" Margin="10,0,0,0"/>
                 </StackPanel>
 
                 <!-- ファイル内容 -->
-                <Label Grid.Row="3" Grid.Column="0" Content="ファイル内容:" VerticalAlignment="Center" Margin="0,5,0,0"/>
-                <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding ContentPattern}" VerticalAlignment="Center" Margin="0,5,0,0"/>
+                <Label Grid.Row="4" Grid.Column="0" Content="ファイル内容:" VerticalAlignment="Center" Margin="0,5,0,0"/>
+                <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding ContentPattern}" VerticalAlignment="Center" Margin="0,5,0,0"/>
 
                 <!-- オプション -->
-                <Label Grid.Row="4" Grid.Column="0" Content="オプション:" VerticalAlignment="Center" Margin="0,5,0,0"/>
-                <Grid Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,5,0,0">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    
-                    <!-- 基本オプション -->
-                    <StackPanel Grid.Row="0" Orientation="Horizontal">
-                        <CheckBox Content="正規表現を使用" IsChecked="{Binding UseRegex}" Margin="0,0,20,0"/>
-                        <CheckBox Content="大文字小文字を区別" IsChecked="{Binding CaseSensitive}" Margin="0,0,20,0"/>
-                        <CheckBox Content="サブディレクトリを含む" IsChecked="{Binding IncludeSubdirectories}" Margin="0,0,20,0"/>
-                        <CheckBox Content="自動再検索" IsChecked="{Binding EnableAutoSearch}" Margin="0,0,20,0"
-                                  ToolTip="条件変更後1秒で自動的に再検索を実行"/>
-                    </StackPanel>
-                    
-                    <!-- 追加オプション -->
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5,0,0">
-                        <CheckBox Content="大文字小文字を区別しない" IsChecked="{Binding CaseInsensitive}" Margin="0,0,20,0"/>
-                        <CheckBox Content="単語単位で検索" IsChecked="{Binding WholeWordOnly}" Margin="0,0,20,0"/>
-                    </StackPanel>
-                </Grid>
-
-                <!-- フィルタ選択 -->
-                <Label Grid.Row="5" Grid.Column="0" Content="保存フィルタ:" VerticalAlignment="Center" Margin="0,5,0,0"/>
+                <Label Grid.Row="5" Grid.Column="0" Content="オプション:" VerticalAlignment="Center" Margin="0,5,0,0"/>
                 <StackPanel Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,5,0,0">
-                    <ComboBox ItemsSource="{Binding SavedFilters}" 
-                              SelectedItem="{Binding SelectedFilter}"
-                              DisplayMemberPath="Name"
-                              Width="200" 
-                              Margin="0,0,10,0"/>
-                    <Button Content="適用" Command="{Binding ApplySelectedFilterCommand}" Width="60" Height="25" Margin="0,0,10,0"/>
-                    <Button Content="保存" Command="{Binding SaveCurrentFilterCommand}" Width="60" Height="25" Margin="0,0,10,0"/>
-                    <Button Content="削除" Command="{Binding DeleteSelectedFilterCommand}" Width="60" Height="25" Margin="0,0,10,0"/>
-                    <Button Content="デフォルト" Command="{Binding SetAsDefaultFilterCommand}" Width="80" Height="25"/>
+                    <CheckBox Content="正規表現を使用" IsChecked="{Binding UseRegex}" Margin="0,0,20,0"/>
+                    <CheckBox Content="大文字小文字を区別" IsChecked="{Binding CaseSensitive}" Margin="0,0,20,0"/>
+                    <CheckBox Content="サブディレクトリを含む" IsChecked="{Binding IncludeSubdirectories}" Margin="0,0,20,0"/>
+                    <CheckBox Content="自動再検索" IsChecked="{Binding EnableAutoSearch}" Margin="0,0,20,0"
+                              ToolTip="条件変更後1秒で自動的に再検索を実行"/>
+                    <CheckBox Content="単語単位で検索" IsChecked="{Binding WholeWordOnly}" Margin="0,0,20,0"/>
                 </StackPanel>
 
                 <!-- 実行ボタン -->
-                <StackPanel Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-                    <Button Content="検索開始" Command="{Binding StartSearchCommand}" Width="80" Height="30" Margin="0,0,10,0"
-                            IsEnabled="{Binding IsSearching, Converter={StaticResource InverseBooleanConverter}}"/>
-                    <Button Content="キャンセル" Command="{Binding CancelSearchCommand}" Width="80" Height="30" Margin="0,0,10,0"
-                            IsEnabled="{Binding IsSearching}"/>
-                    <Button Content="結果クリア" Command="{Binding ClearResultsCommand}" Width="80" Height="30" Margin="0,0,10,0"/>
+                <Grid Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
                     
-                    <!-- エクスポートボタン -->
-                    <Button Content="CSV出力" Command="{Binding ExportToCsvCommand}" Width="80" Height="30" Margin="0,0,5,0"/>
-                    <Button Content="JSON出力" Command="{Binding ExportToJsonCommand}" Width="80" Height="30" Margin="0,0,5,0"/>
-                    <Button Content="HTML出力" Command="{Binding ExportToHtmlCommand}" Width="80" Height="30" Margin="0,0,5,0"/>
-                    <Button Content="TXT出力" Command="{Binding ExportToTxtCommand}" Width="80" Height="30"/>
-                </StackPanel>
+                    <!-- 検索関連ボタン（左寄せ） -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <Button Content="検索" Command="{Binding StartSearchCommand}" Width="80" Height="30" Margin="0,0,10,0"/>
+                        <Button Content="キャンセル" Command="{Binding CancelSearchCommand}" Width="80" Height="30" Margin="0,0,10,0"
+                                IsEnabled="{Binding IsSearching}"/>
+                        <Button Content="クリア" Command="{Binding ClearResultsCommand}" Width="80" Height="30"/>
+                    </StackPanel>
+                    
+                    <!-- エクスポートボタン（右寄せ） -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <Button Content="CSV出力" Command="{Binding ExportToCsvCommand}" Width="80" Height="30" Margin="0,0,5,0"/>
+                        <Button Content="JSON出力" Command="{Binding ExportToJsonCommand}" Width="80" Height="30" Margin="0,0,5,0"/>
+                        <Button Content="HTML出力" Command="{Binding ExportToHtmlCommand}" Width="80" Height="30" Margin="0,0,5,0"/>
+                        <Button Content="TXT出力" Command="{Binding ExportToTxtCommand}" Width="80" Height="30"/>
+                    </StackPanel>
+                </Grid>
             </Grid>
         </GroupBox>
 
         <!-- 検索結果 -->
-        <GroupBox Grid.Row="1" Header="検索結果" Margin="10,0,10,10" Padding="5">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <!-- 進行状況 -->
-                <Grid Grid.Row="0" Margin="0,0,0,10" Visibility="{Binding IsSearching, Converter={x:Static local:BooleanToVisibilityConverter.Instance}}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <ProgressBar Grid.Column="0" Value="{Binding ProgressPercentage}" Height="20" Margin="0,0,10,0" 
-                                 IsIndeterminate="{Binding IsSearching}"/>
-                    <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="0,0,0,0">
-                        <Run Text="{Binding FilesScanned, StringFormat='{}{0:N0}'}"/>
-                        <Run Text="ファイル走査 /"/>
-                        <Run Text="{Binding FilesMatched, StringFormat='{}{0:N0}'}"/>
-                        <Run Text="件一致"/>
-                    </TextBlock>
-                </Grid>
-
-                <!-- 結果リスト -->
-                <DataGrid Grid.Row="1" ItemsSource="{Binding SearchResults}" AutoGenerateColumns="False" 
-                         IsReadOnly="True" GridLinesVisibility="Horizontal" HeadersVisibility="Column"
-                         RowHeight="25" SelectionMode="Single">
+        <GroupBox Grid.Row="2" Header="検索結果" Margin="10,0,10,10" Padding="5">
+            <!-- 結果リスト -->
+            <DataGrid ItemsSource="{Binding SearchResults}" AutoGenerateColumns="False" 
+                     IsReadOnly="True" GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                     RowHeight="25" SelectionMode="Single">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="ファイル名" Binding="{Binding FileName}" Width="200"/>
                         <DataGridTextColumn Header="フォルダ" Binding="{Binding Directory}" Width="300"/>
@@ -182,14 +249,28 @@
                                      CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=DataGrid}}"/>
                     </DataGrid.InputBindings>
                 </DataGrid>
-            </Grid>
         </GroupBox>
 
         <!-- ステータスバー -->
-        <StatusBar Grid.Row="2" Height="25">
+        <StatusBar Grid.Row="3" Height="30">
             <StatusBarItem>
                 <TextBlock Text="{Binding SearchStatus}"/>
             </StatusBarItem>
+            
+            <!-- プログレスバー（検索中のみ表示） -->
+            <StatusBarItem Visibility="{Binding IsSearching, Converter={x:Static local:BooleanToVisibilityConverter.Instance}}">
+                <StackPanel Orientation="Horizontal">
+                    <ProgressBar Value="{Binding ProgressPercentage}" Width="200" Height="16" Margin="10,0,10,0" 
+                                 IsIndeterminate="{Binding IsSearching}"/>
+                    <TextBlock VerticalAlignment="Center">
+                        <Run Text="{Binding FilesScanned, StringFormat='{}{0:N0}'}"/>
+                        <Run Text="ファイル走査 /"/>
+                        <Run Text="{Binding FilesMatched, StringFormat='{}{0:N0}'}"/>
+                        <Run Text="件一致"/>
+                    </TextBlock>
+                </StackPanel>
+            </StatusBarItem>
+            
             <StatusBarItem HorizontalAlignment="Right">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="処理時間: "/>

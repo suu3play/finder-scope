@@ -52,6 +52,17 @@ namespace FinderScope.Core.Models
         /// 使用回数
         /// </summary>
         public int UsageCount { get; set; } = 0;
+        public object? TargetFolder { get; set; }
+        public object? FilenamePattern { get; set; }
+        public object? FileExtensions { get; set; }
+        public object? DateFrom { get; set; }
+        public object? ContentPattern { get; set; }
+        public object? DateTo { get; set; }
+        public object? UseRegex { get; set; }
+        public object? CaseSensitive { get; set; }
+        public object? IncludeSubdirectories { get; set; }
+        public object? EnableAutoSearch { get; set; }
+        public object? WholeWordOnly { get; set; }
 
         /// <summary>
         /// フィルタが有効かどうか
