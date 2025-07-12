@@ -22,9 +22,11 @@ namespace FinderScope.WPF
                     services.AddSingleton<IFilterService, FilterService>();
                     services.AddSingleton<IFileIndexService, FileIndexService>();
                     services.AddSingleton<ISearchHistoryService, SearchHistoryService>();
+                    services.AddSingleton<IFilePreviewService, FilePreviewService>();
                     
                     // ViewModels
                     services.AddTransient<MainWindowViewModel>();
+                    services.AddTransient<FilterManagerDialogViewModel>();
                 })
                 .Build();
 

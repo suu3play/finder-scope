@@ -25,10 +25,12 @@ namespace FinderScope.WPF.ViewModels
         private readonly IFilterService _filterService;
         private readonly IFileIndexService _fileIndexService;
         private readonly ISearchHistoryService _searchHistoryService;
+        private readonly IFilePreviewService _filePreviewService;
         private CancellationTokenSource? _searchCancellationTokenSource;
         private SearchResult? _lastSearchResult;
         private Timer? _autoSearchTimer;
         private DateTime _lastSearchTime;
+        private bool _isApplyingFilter = false;
 
         [ObservableProperty]
         private string _targetFolder = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
@@ -112,17 +114,72 @@ namespace FinderScope.WPF.ViewModels
         [ObservableProperty]
         private bool _wholeWordOnly = false;
 
+        [ObservableProperty]
+        private FileMatch? _selectedFileMatch;
+
+        [ObservableProperty]
+        private FilePreview? _currentFilePreview;
+
+        [ObservableProperty]
+        private bool _isPreviewLoading = false;
+
+        [ObservableProperty]
+        private string _previewStatusMessage = string.Empty;
+
+        [ObservableProperty]
+        private FileCategory _selectedCategory = FileCategory.Document;
+
+        // ラジオボタン用のカテゴリ選択プロパティ
+        [ObservableProperty]
+        private bool _isDocumentCategorySelected = true;
+
+        [ObservableProperty]
+        private bool _isCodeCategorySelected = false;
+
+        [ObservableProperty]
+        private bool _isWebCategorySelected = false;
+
+        [ObservableProperty]
+        private bool _isAllCategorySelected = false;
+
+        // カテゴリ別の拡張子ボタンの表示状態
+        [ObservableProperty]
+        private bool _isTxtVisible;
+
+        [ObservableProperty]
+        private bool _isLogVisible;
+
+        [ObservableProperty]
+        private bool _isCsVisible;
+
+        [ObservableProperty]
+        private bool _isJsVisible;
+
+        [ObservableProperty]
+        private bool _isPyVisible;
+
+        [ObservableProperty]
+        private bool _isXmlVisible;
+
+        [ObservableProperty]
+        private bool _isJsonVisible;
+
         public ObservableCollection<FileMatch> SearchResults { get; } = new();
         public ObservableCollection<SearchFilter> SavedFilters { get; } = new();
+        public ObservableCollection<FileCategoryInfo> FileCategories { get; } = new();
 
-        public MainWindowViewModel(IFileSearchService fileSearchService, IExportService exportService, IFilterService filterService, IFileIndexService fileIndexService, ISearchHistoryService searchHistoryService)
+        public MainWindowViewModel(IFileSearchService fileSearchService, IExportService exportService, IFilterService filterService, IFileIndexService fileIndexService, ISearchHistoryService searchHistoryService, IFilePreviewService filePreviewService)
         {
             _fileSearchService = fileSearchService;
             _exportService = exportService;
             _filterService = filterService;
             _fileIndexService = fileIndexService;
             _searchHistoryService = searchHistoryService;
+            _filePreviewService = filePreviewService;
             _fileSearchService.ProgressChanged += OnSearchProgressChanged;
+            
+            // カテゴリの初期化
+            InitializeFileCategories();
             
             // 保存済みフィルタの読み込み
             _ = LoadSavedFiltersAsync();
@@ -144,6 +201,15 @@ namespace FinderScope.WPF.ViewModels
         partial void OnContentPatternChanged(string value) => TriggerAutoSearch();
         partial void OnFileExtensionsChanged(string value) => TriggerAutoSearch();
         partial void OnEnableAutoSearchChanged(bool value) => ToggleAutoSearch(value);
+        partial void OnSelectedFileMatchChanged(FileMatch? value) => _ = LoadFilePreviewAsync(value);
+        partial void OnSelectedFilterChanged(SearchFilter? value) => _ = ApplyFilterOnSelectionChangeAsync(value);
+        partial void OnSelectedCategoryChanged(FileCategory value) => UpdateExtensionButtonVisibility();
+        
+        // ラジオボタン変更時の処理
+        partial void OnIsDocumentCategorySelectedChanged(bool value) { if (value) UpdateSelectedCategory(FileCategory.Document); }
+        partial void OnIsCodeCategorySelectedChanged(bool value) { if (value) UpdateSelectedCategory(FileCategory.Code); }
+        partial void OnIsWebCategorySelectedChanged(bool value) { if (value) UpdateSelectedCategory(FileCategory.Web); }
+        partial void OnIsAllCategorySelectedChanged(bool value) { if (value) UpdateSelectedCategory(FileCategory.All); }
 
         private void UpdateFileExtensions()
         {
@@ -241,6 +307,19 @@ namespace FinderScope.WPF.ViewModels
         private void CancelSearch()
         {
             _searchCancellationTokenSource?.Cancel();
+        }
+
+        [RelayCommand]
+        private void OpenFilterManager()
+        {
+            var dialog = new Views.FilterManagerDialog();
+            var viewModel = new FilterManagerDialogViewModel(_filterService);
+            dialog.DataContext = viewModel;
+            dialog.Owner = Application.Current.MainWindow;
+            dialog.ShowDialog();
+            
+            // フィルタ管理ダイアログが閉じられた後、保存フィルタを再読み込み
+            _ = LoadSavedFiltersAsync();
         }
 
         [RelayCommand]
@@ -504,6 +583,27 @@ namespace FinderScope.WPF.ViewModels
         }
 
         /// <summary>
+        /// メニューからフィルタを適用
+        /// </summary>
+        [RelayCommand]
+        private async Task ApplyFilterAsync(SearchFilter filter)
+        {
+            if (filter != null && !string.IsNullOrEmpty(filter.Id))
+            {
+                ApplyFilter(filter);
+                SelectedFilter = filter;
+                try
+                {
+                    await _filterService.RecordFilterUsageAsync(filter.Id);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"フィルタ使用記録の保存に失敗: {ex.Message}");
+                }
+            }
+        }
+
+        /// <summary>
         /// フィルタを検索条件に適用
         /// </summary>
         private void ApplyFilter(SearchFilter filter)
@@ -520,6 +620,36 @@ namespace FinderScope.WPF.ViewModels
             UseRegex = criteria.UseRegex;
             CaseSensitive = criteria.CaseSensitive;
             IncludeSubdirectories = criteria.IncludeSubdirectories;
+        }
+
+        /// <summary>
+        /// フィルタ選択変更時の自動適用処理
+        /// </summary>
+        private async Task ApplyFilterOnSelectionChangeAsync(SearchFilter? filter)
+        {
+            if (_isApplyingFilter) return; // 重複実行を防ぐ
+            
+            if (filter != null && !string.IsNullOrEmpty(filter.Id))
+            {
+                _isApplyingFilter = true;
+                try
+                {
+                    ApplyFilter(filter);
+                    try
+                    {
+                        await _filterService.RecordFilterUsageAsync(filter.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        // 使用記録の失敗は致命的ではないため、エラーログのみ
+                        System.Diagnostics.Debug.WriteLine($"フィルタ使用記録の保存に失敗: {ex.Message}");
+                    }
+                }
+                finally
+                {
+                    _isApplyingFilter = false;
+                }
+            }
         }
 
         /// <summary>
@@ -621,6 +751,80 @@ namespace FinderScope.WPF.ViewModels
 
         #endregion
 
+        #region カテゴリ機能
+
+        /// <summary>
+        /// ファイルカテゴリの初期化
+        /// </summary>
+        private void InitializeFileCategories()
+        {
+            FileCategories.Clear();
+            
+            FileCategories.Add(new FileCategoryInfo(FileCategory.Document, "ドキュメント", 
+                new List<string> { ".txt", ".log" }, "テキストファイル・ログファイル"));
+            
+            FileCategories.Add(new FileCategoryInfo(FileCategory.Code, "プログラムコード", 
+                new List<string> { ".cs", ".js", ".py" }, "C#、JavaScript、Pythonファイル"));
+            
+            FileCategories.Add(new FileCategoryInfo(FileCategory.Web, "Web・マークアップ", 
+                new List<string> { ".xml", ".json" }, "XML、JSONファイル"));
+            
+            FileCategories.Add(new FileCategoryInfo(FileCategory.All, "すべて", 
+                new List<string> { ".txt", ".log", ".cs", ".js", ".py", ".xml", ".json" }, "すべてのファイル形式"));
+
+            // 初期表示の更新
+            UpdateExtensionButtonVisibility();
+        }
+
+        /// <summary>
+        /// 選択されたカテゴリに応じて拡張子ボタンの表示状態を更新
+        /// </summary>
+        private void UpdateExtensionButtonVisibility()
+        {
+            var selectedCategory = FileCategories.FirstOrDefault(c => c.Category == SelectedCategory);
+            if (selectedCategory == null) return;
+
+            var extensions = selectedCategory.Extensions;
+
+            IsTxtVisible = extensions.Contains(".txt");
+            IsLogVisible = extensions.Contains(".log");
+            IsCsVisible = extensions.Contains(".cs");
+            IsJsVisible = extensions.Contains(".js");
+            IsPyVisible = extensions.Contains(".py");
+            IsXmlVisible = extensions.Contains(".xml");
+            IsJsonVisible = extensions.Contains(".json");
+
+            // カテゴリ変更時に現在選択されている拡張子をリセット
+            ResetExtensionSelections();
+        }
+
+        /// <summary>
+        /// 拡張子選択をリセット
+        /// </summary>
+        private void ResetExtensionSelections()
+        {
+            IsTxtSelected = false;
+            IsLogSelected = false;
+            IsCsSelected = false;
+            IsJsSelected = false;
+            IsPySelected = false;
+            IsXmlSelected = false;
+            IsJsonSelected = false;
+        }
+
+        /// <summary>
+        /// ラジオボタンからカテゴリを更新
+        /// </summary>
+        private void UpdateSelectedCategory(FileCategory category)
+        {
+            if (SelectedCategory != category)
+            {
+                SelectedCategory = category;
+            }
+        }
+
+        #endregion
+
         #region 自動検索機能
 
         /// <summary>
@@ -676,6 +880,79 @@ namespace FinderScope.WPF.ViewModels
             catch
             {
                 // 自動検索のエラーは無視
+            }
+        }
+
+        #endregion
+
+        #region ファイルプレビュー機能
+
+        /// <summary>
+        /// ファイルプレビューを読み込む
+        /// </summary>
+        private async Task LoadFilePreviewAsync(FileMatch? fileMatch)
+        {
+            if (fileMatch == null)
+            {
+                CurrentFilePreview = null;
+                PreviewStatusMessage = "ファイルを選択してください";
+                return;
+            }
+
+            try
+            {
+                IsPreviewLoading = true;
+                PreviewStatusMessage = "プレビューを読み込み中...";
+                
+                var settings = new PreviewSettings
+                {
+                    MaxPreviewSize = 1024 * 1024, // 1MB
+                    MaxDisplayLines = 100,
+                    ContextLines = 3,
+                    TimeoutMs = 5000,
+                    EnableEncodingDetection = true,
+                    EnableBinaryDetection = true
+                };
+
+                using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(settings.TimeoutMs));
+                var preview = await _filePreviewService.GeneratePreviewAsync(fileMatch, settings, cts.Token);
+                
+                CurrentFilePreview = preview;
+                
+                if (preview.IsPreviewable)
+                {
+                    PreviewStatusMessage = $"行数: {preview.DisplayLines}/{preview.TotalLines}, エンコーディング: {preview.Encoding}";
+                }
+                else
+                {
+                    PreviewStatusMessage = preview.PreviewErrorMessage ?? "プレビューできません";
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                CurrentFilePreview = null;
+                PreviewStatusMessage = "プレビューがタイムアウトしました";
+            }
+            catch (Exception ex)
+            {
+                CurrentFilePreview = null;
+                PreviewStatusMessage = $"エラー: {ex.Message}";
+            }
+            finally
+            {
+                IsPreviewLoading = false;
+            }
+        }
+
+        /// <summary>
+        /// プレビューを更新する
+        /// </summary>
+        [RelayCommand]
+        private async Task RefreshPreviewAsync()
+        {
+            if (SelectedFileMatch != null)
+            {
+                await LoadFilePreviewAsync(SelectedFileMatch);
             }
         }
 
